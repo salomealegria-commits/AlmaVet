@@ -1,0 +1,6 @@
+{
+  "name": "AlmaVet — Clínica Veterinaria y Tienda",
+  "description": "Plataforma veterinaria integral con servicios médicos para mascotas, agendamiento de citas sin duplicados, tienda online y panel administrativo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
