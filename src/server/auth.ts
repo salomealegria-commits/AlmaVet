@@ -26,21 +26,34 @@ function signPayload(payloadB64: string): string {
   return crypto.createHmac('sha256', SESSION_SECRET).update(payloadB64).digest('base64url');
 }
 
-export function setSessionCookie(res: Response, userId: number): void {
+function isSecureRequest(req?: Request): boolean {
+  if (!req) return false;
+  const proto = req.headers['x-forwarded-proto'];
+  return req.secure || proto === 'https' || (Array.isArray(proto) && proto.includes('https'));
+}
+
+export function setSessionCookie(req: Request, res: Response, userId: number): void {
   const payload = JSON.stringify({ uid: userId, iat: Date.now() });
   const payloadB64 = Buffer.from(payload, 'utf8').toString('base64url');
   const sig = signPayload(payloadB64);
   const token = `${payloadB64}.${sig}`;
+  const secure = isSecureRequest(req);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: secure ? 'none' : 'lax',
+    secure,
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
-export function clearSessionCookie(res: Response): void {
-  res.clearCookie(COOKIE_NAME, { path: '/' });
+export function clearSessionCookie(req: Request, res: Response): void {
+  const secure = isSecureRequest(req);
+  res.clearCookie(COOKIE_NAME, {
+    path: '/',
+    sameSite: secure ? 'none' : 'lax',
+    secure,
+  });
 }
 
 function parseCookies(cookieHeader: string | undefined): Record<string, string> {

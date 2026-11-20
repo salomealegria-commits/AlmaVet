@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
@@ -20,6 +21,7 @@ initDatabase();
 const app = express();
 const PORT = 3000;
 
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '2mb' }));
 
 function getAuthUser(req: express.Request): AuthUser {
@@ -61,7 +63,7 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   const userId = Number(row.id);
-  setSessionCookie(res, userId);
+  setSessionCookie(req, res, userId);
 
   res.json({
     ok: true,
@@ -103,7 +105,7 @@ app.post('/api/auth/register', (req, res) => {
     .run(nombre, email, telefono || null, passHash);
   const userId = Number(info.lastInsertRowid);
 
-  setSessionCookie(res, userId);
+  setSessionCookie(req, res, userId);
   res.status(201).json({
     ok: true,
     user: {
@@ -118,8 +120,8 @@ app.post('/api/auth/register', (req, res) => {
   });
 });
 
-app.post('/api/auth/logout', (_req, res) => {
-  clearSessionCookie(res);
+app.post('/api/auth/logout', (req, res) => {
+  clearSessionCookie(req, res);
   res.json({ ok: true });
 });
 
@@ -911,9 +913,11 @@ app.post('/api/admin/veterinarians', requireAuth(['administrador']), (req, res) 
 
 /* ==================== VITE / STATIC ==================== */
 async function startServer() {
+  const httpServer = http.createServer(app);
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, ws: { server: httpServer } },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -930,7 +934,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`AlmaVet server running on http://0.0.0.0:${PORT}`);
   });
 }
