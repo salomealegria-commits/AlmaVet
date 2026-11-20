@@ -1,9 +1,12 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { hashPassword } from './auth.ts';
 
-const dataDir = path.resolve(process.cwd(), 'data');
+const dataDir = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'almavet-data')
+  : path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
